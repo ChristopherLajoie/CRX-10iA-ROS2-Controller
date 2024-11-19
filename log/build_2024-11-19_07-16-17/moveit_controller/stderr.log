@@ -1,0 +1,14 @@
+[01m[K/home/chris/ros2_ws/src/moveit_controller/src/ethernetip_utils.cpp:22:[m[K [01;35m[Kwarning: [m[K"INPUT_ASSEMBLY_SIZE" redefined
+   22 | #define INPUT_ASSEMBLY_SIZE    16
+      | 
+In file included from [01m[K/home/chris/ros2_ws/src/moveit_controller/src/ethernetip_utils.cpp:5[m[K:
+[01m[K/home/chris/ros2_ws/src/moveit_controller/include/OpENerInterface.hpp:21:[m[K [01;36m[Knote: [m[Kthis is the location of the previous definition
+   21 | #define INPUT_ASSEMBLY_SIZE    32
+      | 
+[01m[K/home/chris/ros2_ws/src/moveit_controller/src/ethernetip_utils.cpp:23:[m[K [01;35m[Kwarning: [m[K"OUTPUT_ASSEMBLY_SIZE" redefined
+   23 | #define OUTPUT_ASSEMBLY_SIZE   16
+      | 
+In file included from [01m[K/home/chris/ros2_ws/src/moveit_controller/src/ethernetip_utils.cpp:5[m[K:
+[01m[K/home/chris/ros2_ws/src/moveit_controller/include/OpENerInterface.hpp:22:[m[K [01;36m[Knote: [m[Kthis is the location of the previous definition
+   22 | #define OUTPUT_ASSEMBLY_SIZE   32
+      | 

@@ -2,11 +2,14 @@
 
 import rclpy
 import time
+import math
+import threading
+import queue
 
 from std_msgs.msg import Empty
 from rclpy.node import Node
 from moveit_controller.goal_builder import build_goal_msg
-from moveit_controller.socket_utils import setup_socket, socket_listener
+from moveit_controller.socket_utils import setup_socket, socket_server
 from moveit_controller.error_codes import error_code_dict
 from moveit_msgs.msg import MoveItErrorCodes
 from moveit_msgs.action import MoveGroup, ExecuteTrajectory
@@ -15,6 +18,13 @@ from rclpy.action import ActionClient
 class MoveitController(Node):
     def __init__(self):
         super().__init__('moveit_controller')
+
+        self.declare_parameter('joint_goals', [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        joint_goals_deg = self.get_parameter('joint_goals').value
+        self.joint_goals_rad = [math.radians(angle) for angle in joint_goals_deg]
+
+        # Set up parameter change callback
+        self.add_on_set_parameters_callback(self.parameter_callback)
 
          # Socket setup
         self.declare_parameter('ip_address', '127.0.0.1')
@@ -26,7 +36,20 @@ class MoveitController(Node):
         self.get_logger().info(f'IP Address: {self.ip_address}')
         self.get_logger().info(f'Port: {self.port}')
 
-        self.conn, self.addr = setup_socket(self.ip_address, self.port, self.get_logger())
+        # Initialize command queue
+        self.command_queue = queue.Queue()
+
+        # Initialize socket server
+        self.sock = setup_socket(self.ip_address, self.port, self.get_logger())
+        if self.sock is None:
+            self.get_logger().error('Failed to set up socket server.')
+            return
+
+        self.socket_thread = threading.Thread(target=socket_server, args=(self.sock, self.get_logger(), self.command_queue))
+        self.socket_thread.daemon = True
+        self.socket_thread.start()
+
+        self.create_timer(0.1, self.process_commands)
 
         # Publisher
         self.update_start_state_publisher = self.create_publisher(
@@ -36,10 +59,58 @@ class MoveitController(Node):
         self.move_group_action_client = ActionClient(self, MoveGroup, 'move_action')
         self.execute_trajectory_action_client = ActionClient(self, ExecuteTrajectory, 'execute_trajectory')
 
-        self.create_timer(0.1, self.socket_listener_wrapper)
+    def process_commands(self):
+        while not self.command_queue.empty():
+            command = self.command_queue.get()
+            if command == 'home':
+                self.get_logger().info(f"Processing command: {command}")
+                self.plan_and_execute()
+            else:
+                self.get_logger().info(f"Received unrecognized command: {command}")
 
-    def socket_listener_wrapper(self):
-        socket_listener(self.conn, self.get_logger(), self.plan_and_execute)
+    def parameter_callback(self, params):
+        from rcl_interfaces.msg import SetParametersResult
+        successful = True
+
+        for param in params:
+            if param.name == 'joint_goals':
+                try:
+                    joint_goals_deg = param.value
+                    joint_goals_deg = list(joint_goals_deg)
+
+                    self.get_logger().info(f"homing to: {joint_goals_deg}")
+                    joint_goals_deg = [float(angle) for angle in joint_goals_deg]
+
+                    # Convert degrees to radians
+                    self.joint_goals_rad = [math.radians(angle) for angle in joint_goals_deg]
+               
+                except Exception as e:
+                    successful = False
+                    self.get_logger().error(f"Failed to update joint goals: {e}")
+            elif param.name == 'ip_address':
+                try:
+                    ip_address = param.value
+                    if not isinstance(ip_address, str):
+                        raise ValueError("ip_address must be a string")
+                    self.ip_address = ip_address
+                    self.get_logger().info(f"Updated ip_address to {self.ip_address}")
+                except Exception as e:
+                    self.get_logger().error(f"Failed to update ip_address: {e}")
+                    successful = False
+            elif param.name == 'port':
+                try:
+                    port = param.value
+                    if not isinstance(port, int):
+                        raise ValueError("port must be an integer")
+                    self.port = port
+                    self.get_logger().info(f"Updated port to {self.port}")
+                except Exception as e:
+                    self.get_logger().error(f"Failed to update port: {e}")
+                    successful = False
+            else:
+                self.get_logger().warn(f"Unknown parameter: {param.name}")
+
+        return SetParametersResult(successful=successful)
 
     def plan_and_execute(self):
         self.update_start_state()
@@ -56,7 +127,7 @@ class MoveitController(Node):
             self.get_logger().error('MoveGroup action server not available!')
             return
 
-        goal_msg = build_goal_msg()
+        goal_msg = build_goal_msg(self.joint_goals_rad)
 
         self._send_goal_future = self.move_group_action_client.send_goal_async(
             goal_msg,

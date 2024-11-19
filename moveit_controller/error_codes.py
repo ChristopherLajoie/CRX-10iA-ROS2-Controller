@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from moveit_msgs.msg import MoveItErrorCodes
+from action_msgs.msg import GoalStatus
 
 error_code_dict = {
     MoveItErrorCodes.SUCCESS: "Success",
@@ -28,4 +29,14 @@ error_code_dict = {
     MoveItErrorCodes.SENSOR_INFO_STALE: "Sensor info stale",
     MoveItErrorCodes.COMMUNICATION_FAILURE: "Communication failure",
     MoveItErrorCodes.NO_IK_SOLUTION: "No IK solution",
+}
+
+status_code_dict = {
+    GoalStatus.STATUS_UNKNOWN: 'STATUS_UNKNOWN',
+    GoalStatus.STATUS_ACCEPTED: 'STATUS_ACCEPTED',
+    GoalStatus.STATUS_EXECUTING: 'STATUS_EXECUTING',
+    GoalStatus.STATUS_CANCELING: 'STATUS_CANCELING',
+    GoalStatus.STATUS_SUCCEEDED: 'STATUS_SUCCEEDED',
+    GoalStatus.STATUS_CANCELED: 'STATUS_CANCELED',
+    GoalStatus.STATUS_ABORTED: 'STATUS_ABORTED',
 }

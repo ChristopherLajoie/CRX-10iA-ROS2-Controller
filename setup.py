@@ -5,7 +5,7 @@ package_name = 'moveit_controller'
 setup(
     name=package_name,
     version='0.0.0',
-    packages=[package_name],  # Include your Python package
+    packages=[package_name],  
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='your_name',

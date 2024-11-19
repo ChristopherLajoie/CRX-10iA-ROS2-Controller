@@ -2,7 +2,7 @@
 
 from math import pi
 from moveit_msgs.action import MoveGroup
-from moveit_msgs.msg import MotionPlanRequest, Constraints, JointConstraint, WorkspaceParameters
+from moveit_msgs.msg import MotionPlanRequest, PlanningOptions, Constraints, JointConstraint, WorkspaceParameters
 
 def build_goal_msg(home_positions):
     goal_msg = MoveGroup.Goal()
@@ -27,5 +27,7 @@ def build_goal_msg(home_positions):
         constraints.joint_constraints.append(joint_constraint)
 
     goal_msg.request.goal_constraints.append(constraints)
+    goal_msg.planning_options = PlanningOptions()
+    goal_msg.planning_options.plan_only = True
 
     return goal_msg

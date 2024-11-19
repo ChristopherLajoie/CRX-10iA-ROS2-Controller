@@ -2,7 +2,6 @@
 
 import socket
 import re
-import threading
 
 def setup_socket(ip_address, port, logger):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -47,6 +46,7 @@ def socket_server(sock, logger, command_queue):
             conn.close()
         except Exception as e:
             logger.error(f"Socket accept failed: {e}")
-            break
-    sock.close()
+            continue  # Instead of break, continue to accept new connections
+    # sock.close()  # Do not close the socket unless you intend to stop the server
+
 

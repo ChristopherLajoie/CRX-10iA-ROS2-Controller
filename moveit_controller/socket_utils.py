@@ -21,7 +21,7 @@ def socket_server(sock, logger, command_queue):
         try:
             conn, addr = sock.accept()
             logger.info(f'Connected by {addr}')
-            conn.settimeout(1.0) 
+            conn.settimeout(1.0)  
 
             while True:
                 try:
@@ -31,14 +31,14 @@ def socket_server(sock, logger, command_queue):
                         # Remove non-printable characters
                         message = re.sub(r'[^\x20-\x7E]+', '', message).strip().lower()
                         logger.info(f"Received raw data: '{message}'")
-                       
+   
                         command_queue.put(message)
                     else:
-                        
+       
                         logger.info('Connection closed by client.')
                         break
                 except socket.timeout:
-             
+  
                     continue
                 except Exception as e:
                     logger.error(f"Socket error: {e}")
@@ -46,6 +46,7 @@ def socket_server(sock, logger, command_queue):
             conn.close()
         except Exception as e:
             logger.error(f"Socket accept failed: {e}")
-            break
-    sock.close()
+            continue  
+    # sock.close()  # Do not close the socket unless you intend to stop the server
+
 

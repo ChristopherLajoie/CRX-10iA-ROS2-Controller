@@ -35,20 +35,6 @@
 [ 50%] [32mBuilding CXX object CMakeFiles/ethernetip_utils.dir/src/ethernetip_utils.cpp.o[0m
 [ 50%] Built target ament_cmake_python_copy_moveit_controller_setup
 [ 50%] Built target ament_cmake_python_copy_moveit_controller
-[01m[K/home/chris/ros2_ws/src/moveit_controller/src/ethernetip_utils.cpp:22:[m[K [01;35m[Kwarning: [m[K"INPUT_ASSEMBLY_SIZE" redefined
-   22 | #define INPUT_ASSEMBLY_SIZE    16
-      | 
-In file included from [01m[K/home/chris/ros2_ws/src/moveit_controller/src/ethernetip_utils.cpp:5[m[K:
-[01m[K/home/chris/ros2_ws/src/moveit_controller/include/OpENerInterface.hpp:21:[m[K [01;36m[Knote: [m[Kthis is the location of the previous definition
-   21 | #define INPUT_ASSEMBLY_SIZE    32
-      | 
-[01m[K/home/chris/ros2_ws/src/moveit_controller/src/ethernetip_utils.cpp:23:[m[K [01;35m[Kwarning: [m[K"OUTPUT_ASSEMBLY_SIZE" redefined
-   23 | #define OUTPUT_ASSEMBLY_SIZE   16
-      | 
-In file included from [01m[K/home/chris/ros2_ws/src/moveit_controller/src/ethernetip_utils.cpp:5[m[K:
-[01m[K/home/chris/ros2_ws/src/moveit_controller/include/OpENerInterface.hpp:22:[m[K [01;36m[Knote: [m[Kthis is the location of the previous definition
-   22 | #define OUTPUT_ASSEMBLY_SIZE   32
-      | 
 running egg_info
 creating moveit_controller.egg-info
 writing moveit_controller.egg-info/PKG-INFO
@@ -57,8 +43,8 @@ writing top-level names to moveit_controller.egg-info/top_level.txt
 writing manifest file 'moveit_controller.egg-info/SOURCES.txt'
 reading manifest file 'moveit_controller.egg-info/SOURCES.txt'
 writing manifest file 'moveit_controller.egg-info/SOURCES.txt'
-[ 50%] Built target ament_cmake_python_build_moveit_controller_egg
 [100%] [32m[1mLinking CXX executable ethernetip_utils[0m
+[100%] Built target ament_cmake_python_build_moveit_controller_egg
 [100%] Built target ethernetip_utils
 -- Install configuration: ""
 -- Installing: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/lib/moveit_controller/ethernetip_utils

@@ -47,7 +47,7 @@ class MoveitController(Node):
         # Initialize command and response queues
         self.command_queue = queue.Queue()
         self.response_queue = queue.Queue()
-        
+
         self.socket_thread = threading.Thread(target=socket_server, args=(self.sock, self.get_logger(), self.command_queue, self.response_queue))
         self.socket_thread.daemon = True
         self.socket_thread.start()
@@ -169,8 +169,10 @@ class MoveitController(Node):
                 self.send_execution_request(result.planned_trajectory)
             else:
                 self.get_logger().error(f'Planning failed: {error_description}')
+                self.response_queue.put("failed")
         except Exception as e:
             self.get_logger().error(f'Exception in planning_result_callback: {e}')
+            self.response_queue.put("failed")
 
     def send_execution_request(self, trajectory):
         if not self.execute_trajectory_action_client.wait_for_server(timeout_sec=5.0):
@@ -213,20 +215,33 @@ class MoveitController(Node):
 
             result = goal_result.result
 
+            self.get_logger().info(f'Execution result status: {status_name}')
+            self.get_logger().info(f'Execution result error code: {result.error_code.val}')
+
             if status == GoalStatus.STATUS_SUCCEEDED:
                 error_code = result.error_code.val
                 error_description = error_code_dict.get(
                     error_code, f"Unknown error code: {error_code}")
                 if error_code == MoveItErrorCodes.SUCCESS:
                     self.get_logger().info('Execution completed successfully.')
+                    # Send success message to client
+                    self.response_queue.put("succeeded")
                 else:
                     self.get_logger().error(f'Execution failed: {error_description}')
+                    # Send failure message to client
+                    self.response_queue.put("failed")
             elif status == GoalStatus.STATUS_ABORTED:
-                self.get_logger().error(f'Execution was aborted by the action server')
+                self.get_logger().error(f'Execution was aborted by the action server. Status: {status_name}')
+                # Send aborted message to client
+                self.response_queue.put("aborted")
             elif status == GoalStatus.STATUS_CANCELED:
-                self.get_logger().info(f'Execution goal was canceled')
+                self.get_logger().info(f'Execution goal was canceled. Status: {status_name}')
+                # Send canceled message to client
+                self.response_queue.put("canceled")
             else:
                 self.get_logger().error(f'Execution failed with status: {status_name}')
+                # Send generic failure message to client
+                self.response_queue.put("failed")
         except Exception as e:
             self.get_logger().error(f'Exception in execution_result_callback: {e}')
         finally:

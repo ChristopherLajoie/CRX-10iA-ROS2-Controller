@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 
 import rclpy
-import time
 import math
 import threading
 import queue
 
 from std_msgs.msg import Empty
+from action_msgs.msg import GoalStatus
 from rclpy.node import Node
 from moveit_controller.goal_builder import build_goal_msg
 from moveit_controller.socket_utils import setup_socket, socket_server
-from moveit_controller.error_codes import error_code_dict
+from moveit_controller.error_codes import error_code_dict, status_code_dict
 from moveit_msgs.msg import MoveItErrorCodes
 from moveit_msgs.action import MoveGroup, ExecuteTrajectory
 from rclpy.action import ActionClient
@@ -23,14 +23,8 @@ class MoveitController(Node):
         joint_goals_deg = self.get_parameter('joint_goals').value
         self.joint_goals_rad = [math.radians(angle) for angle in joint_goals_deg]
 
-        # Set up parameter change callback
+        self.execution_goal_handle = None
         self.add_on_set_parameters_callback(self.parameter_callback)
-
-        # Variables to track execution result and timeout
-        self.execution_result_future = None
-        self.execution_result_start_time = None
-        self.execution_result_timeout = 15
-        self.busy = False
 
         # Socket setup
         self.declare_parameter('ip_address', '127.0.0.1')
@@ -42,7 +36,6 @@ class MoveitController(Node):
         self.get_logger().info(f'IP Address: {self.ip_address}')
         self.get_logger().info(f'Port: {self.port}')
 
-        # Initialize command queue
         self.command_queue = queue.Queue()
 
         # Initialize socket server
@@ -51,12 +44,15 @@ class MoveitController(Node):
             self.get_logger().error('Failed to set up socket server.')
             return
 
-        self.socket_thread = threading.Thread(target=socket_server, args=(self.sock, self.get_logger(), self.command_queue))
+        # Initialize command and response queues
+        self.command_queue = queue.Queue()
+        self.response_queue = queue.Queue()
+
+        self.socket_thread = threading.Thread(target=socket_server, args=(self.sock, self.get_logger(), self.command_queue, self.response_queue))
         self.socket_thread.daemon = True
         self.socket_thread.start()
 
         self.create_timer(0.1, self.process_commands)
-        self.create_timer(1.0, self.check_execution_result_timeout)
 
         # Publisher
         self.update_start_state_publisher = self.create_publisher(
@@ -67,9 +63,6 @@ class MoveitController(Node):
         self.execute_trajectory_action_client = ActionClient(self, ExecuteTrajectory, 'execute_trajectory')
 
     def process_commands(self):
-        if self.busy:
-            # Node is busy, skip processing new commands
-            return
         while not self.command_queue.empty():
             command = self.command_queue.get()
             if command == 'home':
@@ -160,7 +153,7 @@ class MoveitController(Node):
 
         except Exception as e:
             self.get_logger().error(f'Exception in planning_response_callback: {e}')
-            self.busy = False  # Reset busy flag
+            self.busy = False  
 
     def planning_feedback_callback(self, feedback_msg):
         feedback = feedback_msg.feedback
@@ -176,11 +169,8 @@ class MoveitController(Node):
                 self.send_execution_request(result.planned_trajectory)
             else:
                 self.get_logger().error(f'Planning failed: {error_description}')
-                self.busy = False  # Reset busy flag
         except Exception as e:
             self.get_logger().error(f'Exception in planning_result_callback: {e}')
-            self.busy = False  # Reset busy flag
-
 
     def send_execution_request(self, trajectory):
         if not self.execute_trajectory_action_client.wait_for_server(timeout_sec=5.0):
@@ -194,68 +184,82 @@ class MoveitController(Node):
             goal_msg,
             feedback_callback=self.execution_feedback_callback
         )
-        self._execute_send_goal_future.add_done_callback(self.execution_response_callback)  # Updated callback
+        self._execute_send_goal_future.add_done_callback(self.execution_response_callback) 
 
 
     def execution_response_callback(self, future):
         try:
-            goal_handle = future.result()
-            if not goal_handle.accepted:
+            self.execution_goal_handle = future.result()
+            if not self.execution_goal_handle.accepted:
                 self.get_logger().error('Execution request rejected!')
+                self.busy = False
                 return
 
             self.get_logger().info('Execution request accepted.')
-            self.execution_result_future = goal_handle.get_result_async()
-            self.execution_result_start_time = time.time()
+            self.execution_result_future = self.execution_goal_handle.get_result_async()
             self.execution_result_future.add_done_callback(self.execution_result_callback)
         except Exception as e:
             self.get_logger().error(f'Exception in execution_response_callback: {e}')
 
-
-    def check_execution_result_timeout(self):
-        if self.execution_result_future and not self.execution_result_future.done():
-            elapsed_time = time.time() - self.execution_result_start_time
-            if elapsed_time > self.execution_result_timeout:
-                self.get_logger().error('Execution result timeout reached. Cancelling goal.')
-                # Cancel the goal if possible
-                self.execution_result_future.cancel()
-                self.execution_result_future = None
-                # Optionally, set a flag to indicate the node is ready for new commands
-                self.busy = False
-        elif self.execution_result_future and self.execution_result_future.done():
-            # Execution result received, no need to check further
-            self.execution_result_future = None
-
     def execution_result_callback(self, future):
         try:
-            result = future.result().result
-            error_code = result.error_code.val
-            error_description = error_code_dict.get(error_code, f"Unknown error code: {error_code}")
-            if error_code == MoveItErrorCodes.SUCCESS:
-                self.get_logger().info('Execution completed successfully.')
+            goal_result = future.result()
+            if goal_result is None:
+                self.get_logger().error('Goal result is None.')
+                return
+
+            status = goal_result.status
+            status_name = status_code_dict.get(status, f'Unknown status code: {status}')
+
+            result = goal_result.result
+
+            if status == GoalStatus.STATUS_SUCCEEDED:
+                error_code = result.error_code.val
+                error_description = error_code_dict.get(
+                    error_code, f"Unknown error code: {error_code}")
+                if error_code == MoveItErrorCodes.SUCCESS:
+                    self.get_logger().info('Execution completed successfully.')
+                    # Send success message to client
+                    self.response_queue.put("execution_completed")
+                else:
+                    self.get_logger().error(f'Execution failed: {error_description}')
+                    # Send failure message to client
+                    self.response_queue.put(f"execution_failed: {error_description}")
+            elif status == GoalStatus.STATUS_ABORTED:
+                self.get_logger().error(f'Execution was aborted by the action server. Status: {status_name}')
+                # Send aborted message to client
+                self.response_queue.put("execution_aborted")
+            elif status == GoalStatus.STATUS_CANCELED:
+                self.get_logger().info(f'Execution goal was canceled. Status: {status_name}')
+                # Send canceled message to client
+                self.response_queue.put("execution_canceled")
             else:
-                self.get_logger().error(f'Execution failed: {error_description}')
+                self.get_logger().error(f'Execution failed with status: {status_name}')
+                # Send generic failure message to client
+                self.response_queue.put(f"execution_failed: status {status_name}")
         except Exception as e:
             self.get_logger().error(f'Exception in execution_result_callback: {e}')
         finally:
-            # Reset the future and busy flag
             self.execution_result_future = None
+            self.execution_goal_handle = None
             self.busy = False
 
 
     def execution_feedback_callback(self, feedback_msg):
-        # Log the feedback message for debugging
-        self.get_logger().info(f'Execution feedback: {feedback_msg.state}')
-        # Check if 'failed' is in the state string
-        if 'failed' in feedback_msg.state.lower():
+        state = feedback_msg.feedback.state
+        self.get_logger().info(f'Execution feedback: {state}')
+        if 'failed' in state.lower():
             self.get_logger().error('Execution failed according to feedback.')
-            # Optionally cancel the goal
-            if self.execution_result_future:
-                self.execution_result_future.cancel()
-                self.execution_result_future = None
-            # Reset busy flag to allow new commands
-        self.busy = False
 
+    def cancel_done_callback(self, future):
+        try:
+            cancel_response = future.result()
+            if len(cancel_response.goals_canceling) > 0:
+                self.get_logger().info('Goal successfully canceled.')
+            else:
+                self.get_logger().info('Goal failed to cancel.')
+        except Exception as e:
+            self.get_logger().error(f'Exception in cancel_done_callback: {e}')
 
 
 def main(args=None):

@@ -50,6 +50,11 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
   RENAME controller
 )
+install(PROGRAMS
+  moveit_controller/part_manager.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME part_manager
+)
 
 # Install Python modules
 ament_python_install_package(${PROJECT_NAME})

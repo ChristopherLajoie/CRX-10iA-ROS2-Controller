@@ -3,11 +3,19 @@
 #include <cstring>
 #include <sys/select.h>
 #include "OpENerInterface.hpp"
+
 extern "C" {
     #include "opener_api.h"
     #include "networkhandler.h"
     #include "cipcommon.h"
 }
+
+
+/****************************************************
+ *                                                  *
+ *               TODO ETHERNET IP ADAPTER           *
+ *                                                  *
+ ****************************************************/
 
 bool run_application = true;
 

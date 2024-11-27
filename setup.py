@@ -16,6 +16,7 @@ setup(
     entry_points={
         'console_scripts': [
             'controller = moveit_controller.controller:main',
+            'part_manager = moveit_controller.part_manager:main',
         ],
     },
 )

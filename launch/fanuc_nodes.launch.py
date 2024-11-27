@@ -40,6 +40,13 @@ def generate_launch_description():
                 'test_fanuc.launch.py'
             )
         ),
+        #PythonLaunchDescriptionSource(
+            #os.path.join(
+                #get_package_share_directory('custom_moveit_config'),
+                #'launch',
+                #'custom_test.launch.py'
+            #)
+        #),
         launch_arguments={
             'robot_ip': LaunchConfiguration('robot_ip'),
             'robot_type': LaunchConfiguration('robot_type'),

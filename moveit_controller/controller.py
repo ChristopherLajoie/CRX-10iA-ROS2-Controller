@@ -22,31 +22,6 @@ class MoveitController(Node):
     def __init__(self):
         super().__init__('moveit_controller')
 
-        # Define planning parameters
-        self.group_name = 'arm'
-        self.planner_id = 'BITstarConfigDefault'
-        self.num_planning_attempts = 10
-        self.allowed_planning_time = 15.0
-        self.max_velocity_scaling_factor = 1.0
-        self.max_acceleration_scaling_factor = 1.0
-        self.plan_only = True
-
-        self.declare_parameter('group_name', self.group_name)
-        self.declare_parameter('planner_id', self.planner_id)
-        self.declare_parameter('num_planning_attempts', self.num_planning_attempts)
-        self.declare_parameter('allowed_planning_time', self.allowed_planning_time)
-        self.declare_parameter('max_velocity_scaling_factor', self.max_velocity_scaling_factor)
-        self.declare_parameter('max_acceleration_scaling_factor', self.max_acceleration_scaling_factor)
-        self.declare_parameter('plan_only', self.plan_only)
-
-        self.group_name = self.get_parameter('group_name').value
-        self.planner_id = self.get_parameter('planner_id').value
-        self.num_planning_attempts = self.get_parameter('num_planning_attempts').value
-        self.allowed_planning_time = self.get_parameter('allowed_planning_time').value
-        self.max_velocity_scaling_factor = self.get_parameter('max_velocity_scaling_factor').value
-        self.max_acceleration_scaling_factor = self.get_parameter('max_acceleration_scaling_factor').value
-        self.plan_only = self.get_parameter('plan_only').value
-
         self.declare_parameter('joint_goals', [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
         joint_goals_deg = self.get_parameter('joint_goals').value
         self.joint_goals_rad = [math.radians(angle) for angle in joint_goals_deg]
@@ -143,21 +118,6 @@ class MoveitController(Node):
                 except Exception as e:
                     self.get_logger().error(f"Failed to update port: {e}")
                     successful = False
-
-            elif param.name == 'group_name':
-                self.group_name = param.value
-            elif param.name == 'planner_id':
-                self.planner_id = param.value
-            elif param.name == 'num_planning_attempts':
-                self.num_planning_attempts = param.value
-            elif param.name == 'allowed_planning_time':
-                self.allowed_planning_time = param.value
-            elif param.name == 'max_velocity_scaling_factor':
-                self.max_velocity_scaling_factor = param.value
-            elif param.name == 'max_acceleration_scaling_factor':
-                self.max_acceleration_scaling_factor = param.value
-            elif param.name == 'plan_only':
-                self.plan_only = param.value
             else:
                 self.get_logger().warn(f"Unknown parameter: {param.name}")
                 successful = False
@@ -180,14 +140,7 @@ class MoveitController(Node):
             return
 
         goal_msg = build_goal_msg(
-            joint_positions=self.joint_goals_rad,
-            group_name=self.group_name,
-            planner_id=self.planner_id,
-            num_planning_attempts=self.num_planning_attempts,
-            allowed_planning_time=self.allowed_planning_time,
-            max_velocity_scaling_factor=self.max_velocity_scaling_factor,
-            max_acceleration_scaling_factor=self.max_acceleration_scaling_factor,
-            plan_only=self.plan_only
+            joint_positions=self.joint_goals_rad
         )
 
         self._send_goal_future = self.move_group_action_client.send_goal_async(

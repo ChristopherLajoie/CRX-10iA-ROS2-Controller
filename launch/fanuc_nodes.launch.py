@@ -6,7 +6,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
-    # Launch arguments
+
     robot_ip_arg = DeclareLaunchArgument(
         'robot_ip', default_value='192.168.1.100',
         description='IP address of the robot'
@@ -16,7 +16,6 @@ def generate_launch_description():
         description='Type of the robot'
     )
 
-    # Include both fanuc launch files
     fanuc_interface_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(
@@ -40,13 +39,7 @@ def generate_launch_description():
                 'test_fanuc.launch.py'
             )
         ),
-        #PythonLaunchDescriptionSource(
-            #os.path.join(
-                #get_package_share_directory('custom_moveit_config'),
-                #'launch',
-                #'custom_test.launch.py'
-            #)
-        #),
+
         launch_arguments={
             'robot_ip': LaunchConfiguration('robot_ip'),
             'robot_type': LaunchConfiguration('robot_type'),

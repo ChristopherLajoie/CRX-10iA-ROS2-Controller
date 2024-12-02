@@ -5,7 +5,7 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 def generate_launch_description():
-    # Launch arguments
+
     ip_address_arg = DeclareLaunchArgument(
         'ip_address', default_value='192.168.1.20',
         description='IP address for the moveit_controller node'
@@ -15,7 +15,6 @@ def generate_launch_description():
         description='Port for the moveit_controller node'
     )
 
-    # Moveit controller node
     moveit_controller_node = Node(
         package='moveit_controller',
         executable='controller',
@@ -27,8 +26,16 @@ def generate_launch_description():
         ]
     )
 
+    part_manager_node = Node(
+        package='moveit_controller',
+        executable='part_manager',
+        name='paart_manager',
+        output='screen'
+    )
+
     return LaunchDescription([
         ip_address_arg,
         port_arg,
         moveit_controller_node,
+        part_manager_node
     ])

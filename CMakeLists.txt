@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 project(moveit_controller)
 
-# Default to C++14
 if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 14)
 endif()
@@ -10,41 +9,35 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-# Find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclpy REQUIRED)
 
-# Include Cpp "include" directory
 include_directories(include)
 
-# Link directories
 link_directories(/usr/local/lib)  # Path to OpENer library
 
-# Create Cpp executable
-add_executable(ethernetip_utils src/ethernetip_utils.cpp)
-ament_target_dependencies(ethernetip_utils rclcpp)
+add_executable(eip_adapter src/eip_adapter.cpp)
+ament_target_dependencies(eip_adapter rclcpp)
 
-target_link_libraries(ethernetip_utils
-  CIP  # CIP library
-  EIPScanner  # EIP Scanner library
-  ENET_ENCAP  # ENET ENCAP library
-  NVDATA  # NVDATA library
-  PLATFORM_GENERIC  # PLATFORM GENERIC library
-  POSIXPLATFORM  # POSIX PLATFORM library
-  SAMPLE_APP  # SAMPLE APP library
+target_link_libraries(eip_adapter
+  CIP  
+  EIPScanner  
+  ENET_ENCAP  
+  NVDATA  
+  PLATFORM_GENERIC  
+  POSIXPLATFORM  
+  SAMPLE_APP
   Utils
-  pthread  # For threading support
+  pthread  
 )
 
-# Install Cpp executables
 install(TARGETS
-  ethernetip_utils
+  eip_adapter
   DESTINATION lib/${PROJECT_NAME}
 )
 
-# Install Python executables
 install(PROGRAMS
   moveit_controller/controller.py
   DESTINATION lib/${PROJECT_NAME}
@@ -56,10 +49,8 @@ install(PROGRAMS
   RENAME part_manager
 )
 
-# Install Python modules
 ament_python_install_package(${PROJECT_NAME})
 
-# Install launch files
 install(DIRECTORY launch/
   DESTINATION share/${PROJECT_NAME}/launch
 )

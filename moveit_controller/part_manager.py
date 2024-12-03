@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
 
-import rclpy
-import os
-import trimesh
-import math
+import rclpy, os, trimesh, math, yaml
 
 from std_msgs.msg import String
 from rclpy.node import Node
-from moveit_msgs.srv import ApplyPlanningScene
 from moveit_msgs.msg import PlanningScene, CollisionObject, AttachedCollisionObject
 from geometry_msgs.msg import Pose
 from shape_msgs.msg import Mesh, MeshTriangle
 from geometry_msgs.msg import Point
 from transformations import quaternion_from_euler
+from ament_index_python.packages import get_package_share_directory
 
 
 class GripperPartManager(Node):
@@ -25,6 +22,16 @@ class GripperPartManager(Node):
             self.command_callback,
             10
         )
+
+        self.package_share_directory = get_package_share_directory('moveit_controller')
+        config_path = os.path.join(self.package_share_directory, 'config', 'config.yaml')
+        
+        with open(config_path, 'r') as file:
+            config_data = yaml.safe_load(file)
+        
+        self.part_offset_distance = config_data['part_offset_distance']
+        self.normal_axis = config_data['normal_axis']
+        self.part_offset_angle = config_data['part_offset_angle']
 
         self.get_logger().info('PartManager node started.')
 
@@ -40,33 +47,32 @@ class GripperPartManager(Node):
             self.get_logger().warn(f"Received unrecognized command: {command}")
 
     def attach_part(self):
+        
+        mesh_path = os.path.join(self.package_share_directory, 'meshes', 'part.stl')
+        mesh = self.load_mesh(mesh_path)
+    
+        pose = Pose()
+
+        if self.normal_axis == 'z':
+            pose.position.z = self.part_offset_distance
+        elif self.normal_axis == 'y':
+            pose.position.y = self.part_offset_distance
+        elif self.normal_axis == 'x':
+            pose.position.x = self.part_offset_distance
+
+        angle_rad = math.radians(self.part_offset_angle)  
+        pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w = quaternion_from_euler(0, 0, angle_rad)
+
         collision_object = CollisionObject()
         collision_object.id = "part"
-        collision_object.header.frame_id = "gripper_link"
-
-        mesh_path = os.path.join(os.path.dirname(__file__), 'meshes', '/home/chris/ros2_ws/src/fanuc_ros2_driver/crx_description/share/crx_description/meshes/crx10ia_l/visual/cardboard_box.stl')
-        mesh = self.load_mesh(mesh_path)
-
-        pose = Pose()
-        pose.position.x = 0.15  
-        pose.position.y = 0.025
-        pose.position.z = -0.015
-
-        angle_rad = math.radians(45)
-        q = quaternion_from_euler(0, 0, angle_rad)  
-
-        pose.orientation.x = q[0]
-        pose.orientation.y = q[1]
-        pose.orientation.z = q[2]
-        pose.orientation.w = q[3]
-
+        collision_object.header.frame_id = "gripper_link" 
         collision_object.meshes = [mesh]
         collision_object.mesh_poses = [pose]
         collision_object.operation = CollisionObject.ADD
 
         attached_object = AttachedCollisionObject()
         attached_object.object = collision_object
-        attached_object.link_name = "gripper_link"
+        attached_object.link_name = "gripper_link"  
         attached_object.touch_links = ["gripper_link", "part"]  
 
         planning_scene = PlanningScene()
@@ -109,16 +115,6 @@ class GripperPartManager(Node):
 
         self.scene_publisher.publish(planning_scene)
         self.get_logger().info('Part detached from gripper.')
-
-    def apply_planning_scene(self, planning_scene):
-        request = ApplyPlanningScene.Request()
-        request.scene = planning_scene
-        future = self.apply_scene_client.call_async(request)
-        rclpy.spin_until_future_complete(self, future)
-        if future.result() and future.result().success:
-            self.get_logger().info('Planning scene applied successfully.')
-        else:
-            self.get_logger().warn('Failed to apply planning scene.')
 
 def main(args=None):
     rclpy.init(args=args)

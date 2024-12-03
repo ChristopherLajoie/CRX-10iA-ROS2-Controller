@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 
-import rclpy
-import math
-import threading
-import queue
+import rclpy, math, threading, queue, time
 
 from std_msgs.msg import String, Empty
 from action_msgs.msg import GoalStatus
@@ -28,11 +25,13 @@ class MoveitController(Node):
         self.joint_goals_rad = [math.radians(angle) for angle in joint_goals_deg]
 
         self.execution_goal_handle = None
-        self.previous_command = None
         self.retry_timer = None
+        self.previous_part_cmd = None
+        self.previous_home_cmd = None
 
         self.max_retries = 3
-        self.retries = 0
+        self.plan_retries = 0
+        self.exec_retries = 0
 
         self.declare_parameter('ip_address', '127.0.0.1')
         self.ip_address = self.get_parameter('ip_address').get_parameter_value().string_value
@@ -76,20 +75,42 @@ class MoveitController(Node):
     def process_commands(self):
         while not self.command_queue.empty():
             command = self.command_queue.get()
+            reg_num = command['RegNum']
+            value = command['Value']
 
             if not SOCKET_MSG:
-                rising_edge = self.previous_command != '4' and command == '4'
+                home_cmd = self.previous_home_cmd != 4 and value == 4 
+                attach_cmd = self.previous_part_cmd != 1 and value == 1 
+                detach_cmd = self.previous_part_cmd != 2 and value == 2 
+                
+                if attach_cmd:
+                    command = 'attach'
+                elif detach_cmd:
+                    command = 'detach'
 
-            if rising_edge or (SOCKET_MSG and command == 'home'):
+            if home_cmd or (SOCKET_MSG and command == 'home'):
                 self.get_logger().info(f"Processing command: {command}")
                 self.busy = True
                 self.plan_and_execute()
+
             elif command in ['attach', 'detach']:
                 self.part_manager_command_pub.publish(String(data=command))
+
+            elif reg_num == 0:
+                  
+                if isinstance(value, list) and len(value) == 6 and all(isinstance(v, float) for v in value):
+                    self.set_parameters([rclpy.parameter.Parameter('joint_goals', rclpy.Parameter.Type.DOUBLE_ARRAY, value)])
+                else:
+                    self.get_logger().warn(f"Invalid value for joint_goals: {value}")
+
             elif SOCKET_MSG:
                 self.get_logger().info(f"Received unrecognized command: {command}")
 
-            self.previous_command = command
+            if reg_num == 5:
+                self.previous_home_cmd = value
+            elif reg_num == 7:
+                self.previous_part_cmd = value
+            
 
     def parameter_callback(self, params):
         successful = True
@@ -104,7 +125,9 @@ class MoveitController(Node):
                     joint_goals_deg = [float(angle) for angle in joint_goals_deg]
 
                     self.joint_goals_rad = [math.radians(angle) for angle in joint_goals_deg]
-               
+
+                    self.plan_retries = 0
+                    self.exex_retries = 0
                 except Exception as e:
                     successful = False
                     self.get_logger().error(f"Failed to update joint goals: {e}")
@@ -127,6 +150,7 @@ class MoveitController(Node):
     def send_planning_request(self):
         if not self.move_group_action_client.wait_for_server(timeout_sec=5.0):
             self.get_logger().error('MoveGroup action server not available!')
+            self.response_queue.put(2)
             return
 
         goal_msg = build_goal_msg(
@@ -164,9 +188,9 @@ class MoveitController(Node):
             else:
                 self.get_logger().error(f'Planning failed: {error_description}')
 
-                self.retries += 1
-                if self.retries < self.max_retries:
-                    self.get_logger().info(f'Retrying.. attempt {self.retries}')
+                self.plan_retries += 1
+                if self.plan_retries < self.max_retries:
+                    self.get_logger().info(f'Retrying.. attempt {self.plan_retries}')
                     retry_delay = 4.0 
                     if self.retry_timer is None:
                         self.retry_timer = self.create_timer(
@@ -174,6 +198,7 @@ class MoveitController(Node):
                             self.retry_planning
                         )
                 else:
+                    self.plan_retries = 0
                     self.get_logger().error(f'Failed after {self.max_retries} retries.')
                     if SOCKET_MSG:
                         self.response_queue.put("failed")
@@ -230,8 +255,7 @@ class MoveitController(Node):
 
             if status == GoalStatus.STATUS_SUCCEEDED:
                 error_code = result.error_code.val
-                error_description = error_code_dict.get(
-                    error_code, f"Unknown error code: {error_code}")
+                error_description = error_code_dict.get(error_code, f"Unknown error code: {error_code}")
                 if error_code == MoveItErrorCodes.SUCCESS:
                     self.get_logger().info('Execution completed successfully')
                     if SOCKET_MSG:
@@ -241,12 +265,12 @@ class MoveitController(Node):
                 else:
                     self.get_logger().error(f'Execution failed: {error_description}')
                         
-                    self.retries += 1
-                    if self.retries < self.max_retries:
-                        self.get_logger().info(f'Retrying execution. Attempt {self.retries}.')
+                    self.exec_retries += 1
+                    if self.exec_retries < self.max_retries:
+                        self.get_logger().info(f'Retrying execution. Attempt {self.exec_retries}.')
                         self.plan_and_execute()
                     else:
-                        self.retries = 0
+                        self.exec_retries = 0
                         if SOCKET_MSG:
                             self.response_queue.put("failed")
                         else:

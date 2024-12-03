@@ -16,7 +16,7 @@ def build_goal_msg(joint_positions, planner_id='', pipeline_id='ompl'):
     goal_msg.request.workspace_parameters = WorkspaceParameters()
     goal_msg.request.start_state.is_diff = True
     goal_msg.request.group_name = 'arm'
-    goal_msg.request.allowed_planning_time = 5.0
+    goal_msg.request.allowed_planning_time = 30.0
     goal_msg.request.planner_id = planner_id
     goal_msg.request.pipeline_id = pipeline_id
 

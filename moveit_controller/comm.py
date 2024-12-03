@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 
-import socket
-import re
-import time, queue
+import socket, re, time, queue, asyncio, struct
 
-from pycomm3 import CIPDriver
+from pycomm3 import CIPDriver, Services
 
 def setup_socket(ip_address, port, logger):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -91,15 +89,13 @@ class eip_comm:
 
         value_bytes = response.value
         value = int.from_bytes(value_bytes, byteorder='little', signed=True)
-        self.command_queue.put(f'{value}')
-        #self.logger.info(f'Read value from R[5]: {value}')
-
+        self.command_queue.put({'RegNum': RegNum, 'Value': value})
+     
     def writeR_Register(self, RegNum):
         try:
             Value = self.response_queue.get_nowait()
         
         except queue.Empty:
-            #self.logger.info('Response queue is empty')
             return  
 
         try:
@@ -115,13 +111,75 @@ class eip_comm:
                 connected=True
             )
 
-            #self.logger.info(f'Sent value to R[{RegNum}]: {Value}')
             return tag.error
         except Exception as e:
             self.logger.error(f'Failed to write value to R[{RegNum}]: {e}')
     
-    def main(self):
+    def readDO(self, Num):
+
+        response = self.conn.generic_message(
+            service=Services.get_attribute_single,
+            class_code=0x04,
+            instance=0x321,
+            attribute=0x03,
+            data_type=None,
+            connected=False,
+        )
+
+        output = list(response.value)
+        register = ((Num-1) // 8)
+        value = output[register] >> ((Num-1) % 8)
+        value = value & 1
+
+        if value:
+            return True
+        elif not value:
+            return False
+    
+    def readCURPOS(self):
+
+        response = self.conn.generic_message(
+            service=0x0E,
+            class_code=0x7E,
+            instance=1,
+            attribute=1,
+            connected=False
+        )
+
+        output = response.value
+
+        num_joints = 6
+        start_offset = 4 
+        float_size = 4    
+
+        joint_positions = []
+
+        for i in range(num_joints):
+            idx_start = start_offset + i * float_size
+            idx_end = idx_start + float_size
+            joint_value = struct.unpack('f', output[idx_start:idx_end])[0]
+            joint_positions.append(joint_value)
+
+        # Rviz and Fanuc J3 are different
+        if len(joint_positions) >= 3:
+            joint_positions[2] = joint_positions[1] + joint_positions[2]
+
+        self.command_queue.put({'RegNum': 0, 'Value': joint_positions})
+     
+
+    def periodic_task(self):
         while True:
-            self.readR_Register(5)
-            time.sleep(1)
+            do_state = self.readDO(103)
+            if do_state and not executed:
+                self.readCURPOS()
+                executed = True  
+            elif not do_state:
+                executed = False  
+
             self.writeR_Register(6)
+            self.readR_Register(5)
+            self.readR_Register(7)
+            time.sleep(0.1)
+
+    def main(self):
+        self.periodic_task()

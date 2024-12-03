@@ -1,0 +1,5 @@
+# config/config.yaml
+
+part_offset_distance: 0.1
+part_offset_angle: 20
+normal_axis: 'x'

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
-import socket, re, time, queue, asyncio, struct
+import socket, re, time, queue, struct, yaml, os
 
 from pycomm3 import CIPDriver, Services
+from ament_index_python.packages import get_package_share_directory
 
 def setup_socket(ip_address, port, logger):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -62,6 +63,17 @@ def socket_server(sock, logger, command_queue, response_queue):
 class eip_comm:
 
     def __init__(self, logger, ip_address, command_queue, response_queue):
+        
+        self.package_share_directory = get_package_share_directory('moveit_controller')
+        config_path = os.path.join(self.package_share_directory, 'config', 'config.yaml')
+        
+        with open(config_path, 'r') as file:
+            config_data = yaml.safe_load(file)
+        
+        self.read_register = config_data['read_register']
+        self.write_register = config_data['write_register']
+        self.part_handling_register = config_data['part_handling_register']
+    
         self.logger = logger
         self.ip_address = ip_address
         self.command_queue = command_queue
@@ -176,9 +188,9 @@ class eip_comm:
             elif not do_state:
                 executed = False  
 
-            self.writeR_Register(6)
-            self.readR_Register(5)
-            self.readR_Register(7)
+            self.writeR_Register(self.write_register)
+            self.readR_Register(self.read_register)
+            self.readR_Register(self.part_handling_register)
             time.sleep(0.1)
 
     def main(self):

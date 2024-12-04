@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import rclpy, math, threading, queue, time
+import rclpy, math, threading, queue, os, yaml
 
 from std_msgs.msg import String, Empty
 from action_msgs.msg import GoalStatus
@@ -8,6 +8,7 @@ from rclpy.node import Node
 from moveit_controller.goal_builder import build_goal_msg
 from moveit_controller.comm import setup_socket, socket_server, eip_comm
 from moveit_controller.error_codes import error_code_dict, status_code_dict
+from ament_index_python.packages import get_package_share_directory
 from moveit_msgs.msg import MoveItErrorCodes
 from moveit_msgs.action import MoveGroup, ExecuteTrajectory
 from rclpy.action import ActionClient
@@ -23,6 +24,22 @@ class MoveitController(Node):
         self.declare_parameter('joint_goals', [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
         joint_goals_deg = self.get_parameter('joint_goals').value
         self.joint_goals_rad = [math.radians(angle) for angle in joint_goals_deg]
+
+        self.package_share_directory = get_package_share_directory('moveit_controller')
+        config_path = os.path.join(self.package_share_directory, 'config', 'config.yaml')
+        
+        with open(config_path, 'r') as file:
+            config_data = yaml.safe_load(file)
+        
+        self.home_cmd = config_data['home_cmd']
+        self.attach_cmd = config_data['attach_cmd']
+        self.detach_cmd = config_data['detach_cmd']
+        self.read_register = config_data['read_register']
+        self.part_handling_register = config_data['part_handling_register']
+        self.success_cmd = config_data['success_cmd']
+        self.fail_cmd = config_data['fail_cmd']
+        self.abort_cmd = config_data['abort_cmd']
+        self.cancel_cmd = config_data['cancel_cmd']
 
         self.execution_goal_handle = None
         self.retry_timer = None
@@ -79,9 +96,9 @@ class MoveitController(Node):
             value = command['Value']
 
             if not SOCKET_MSG:
-                home_cmd = self.previous_home_cmd != 4 and value == 4 
-                attach_cmd = self.previous_part_cmd != 1 and value == 1 
-                detach_cmd = self.previous_part_cmd != 2 and value == 2 
+                home_cmd = self.previous_home_cmd != self.home_cmd and value == self.home_cmd
+                attach_cmd = self.previous_part_cmd != self.attach_cmd and value == self.attach_cmd 
+                detach_cmd = self.previous_part_cmd != self.detach_cmd and value == self.detach_cmd 
                 
                 if attach_cmd:
                     command = 'attach'
@@ -106,9 +123,9 @@ class MoveitController(Node):
             elif SOCKET_MSG:
                 self.get_logger().info(f"Received unrecognized command: {command}")
 
-            if reg_num == 5:
+            if reg_num == self.read_register:
                 self.previous_home_cmd = value
-            elif reg_num == 7:
+            elif reg_num == self.part_handling_register:
                 self.previous_part_cmd = value
             
 
@@ -127,7 +144,7 @@ class MoveitController(Node):
                     self.joint_goals_rad = [math.radians(angle) for angle in joint_goals_deg]
 
                     self.plan_retries = 0
-                    self.exex_retries = 0
+                    self.exec_retries = 0
                 except Exception as e:
                     successful = False
                     self.get_logger().error(f"Failed to update joint goals: {e}")
@@ -150,7 +167,7 @@ class MoveitController(Node):
     def send_planning_request(self):
         if not self.move_group_action_client.wait_for_server(timeout_sec=5.0):
             self.get_logger().error('MoveGroup action server not available!')
-            self.response_queue.put(2)
+            self.response_queue.put(self.fail_cmd)
             return
 
         goal_msg = build_goal_msg(
@@ -203,7 +220,7 @@ class MoveitController(Node):
                     if SOCKET_MSG:
                         self.response_queue.put("failed")
                     else:
-                        self.response_queue.put(2)
+                        self.response_queue.put(self.fail_cmd)
 
         except Exception as e:
             self.get_logger().error(f'Exception in planning_result_callback: {e}')
@@ -261,7 +278,7 @@ class MoveitController(Node):
                     if SOCKET_MSG:
                         self.response_queue.put("succeeded")
                     else:
-                        self.response_queue.put(1)
+                        self.response_queue.put(self.success_cmd)
                 else:
                     self.get_logger().error(f'Execution failed: {error_description}')
                         
@@ -274,26 +291,26 @@ class MoveitController(Node):
                         if SOCKET_MSG:
                             self.response_queue.put("failed")
                         else:
-                            self.response_queue.put(2)
+                            self.response_queue.put(self.fail_cmd)
 
             elif status == GoalStatus.STATUS_ABORTED:
                 self.get_logger().error(f'Execution was aborted by the action server. Status: {status_name}')
                 if SOCKET_MSG:
                         self.response_queue.put("aborted")
                 else:
-                    self.response_queue.put(3)
+                    self.response_queue.put(self.abort_cmd)
             elif status == GoalStatus.STATUS_CANCELED:
                 self.get_logger().info(f'Execution goal was canceled. Status: {status_name}')
                 if SOCKET_MSG:
                         self.response_queue.put("canceled")
                 else:
-                    self.response_queue.put(4)
+                    self.response_queue.put(self.cancel_cmd)
             else:
                 self.get_logger().error(f'Execution failed with status: {status_name}')
                 if SOCKET_MSG:
                         self.response_queue.put("failed")
                 else:
-                    self.response_queue.put(2)
+                    self.response_queue.put(self.fail_cmd)
         except Exception as e:
             self.get_logger().error(f'Exception in execution_result_callback: {e}')
         finally:

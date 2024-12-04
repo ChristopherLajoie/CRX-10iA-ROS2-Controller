@@ -3,3 +3,20 @@
 part_offset_distance: 0.1
 part_offset_angle: 20
 normal_axis: 'x'
+
+pipeline: 'ompl'
+planner: ''
+
+read_register: 5
+write_register: 6
+part_handling_register: 7
+
+home_cmd: 4
+attach_cmd: 1
+detach_cmd: 2
+success_cmd: 1
+fail_cmd: 2
+abort_cmd: 3
+cancel_cmd: 4
+
+

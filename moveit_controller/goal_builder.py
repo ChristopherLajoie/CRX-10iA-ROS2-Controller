@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+import yaml, os
+
+from ament_index_python.packages import get_package_share_directory
 from moveit_msgs.action import MoveGroup
 from moveit_msgs.msg import (
     MotionPlanRequest,
@@ -9,7 +12,14 @@ from moveit_msgs.msg import (
     WorkspaceParameters,
 )
 
-def build_goal_msg(joint_positions, planner_id='', pipeline_id='ompl'):
+def build_goal_msg(joint_positions):
+    
+    package_share_directory = get_package_share_directory('moveit_controller')
+    config_path = os.path.join(package_share_directory, 'config', 'config.yaml')
+    
+    with open(config_path, 'r') as file:
+        config_data = yaml.safe_load(file)
+    
     goal_msg = MoveGroup.Goal()
 
     goal_msg.request = MotionPlanRequest()
@@ -17,8 +27,8 @@ def build_goal_msg(joint_positions, planner_id='', pipeline_id='ompl'):
     goal_msg.request.start_state.is_diff = True
     goal_msg.request.group_name = 'arm'
     goal_msg.request.allowed_planning_time = 30.0
-    goal_msg.request.planner_id = planner_id
-    goal_msg.request.pipeline_id = pipeline_id
+    goal_msg.request.planner_id = config_data['planner']
+    goal_msg.request.pipeline_id = config_data['pipeline']
 
     constraints = Constraints()
 

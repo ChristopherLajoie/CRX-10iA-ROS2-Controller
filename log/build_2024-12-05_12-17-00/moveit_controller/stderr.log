@@ -1,0 +1,14 @@
+[01m[K/home/chris/ros2_ws/src/moveit_controller/src/eip_adapter.cpp:30:[m[K [01;35m[Kwarning: [m[K"INPUT_ASSEMBLY_SIZE" redefined
+   30 | #define INPUT_ASSEMBLY_SIZE    16
+      | 
+In file included from [01m[K/home/chris/ros2_ws/src/moveit_controller/src/eip_adapter.cpp:5[m[K:
+[01m[K/home/chris/ros2_ws/src/moveit_controller/include/OpENerInterface.hpp:21:[m[K [01;36m[Knote: [m[Kthis is the location of the previous definition
+   21 | #define INPUT_ASSEMBLY_SIZE    32
+      | 
+[01m[K/home/chris/ros2_ws/src/moveit_controller/src/eip_adapter.cpp:31:[m[K [01;35m[Kwarning: [m[K"OUTPUT_ASSEMBLY_SIZE" redefined
+   31 | #define OUTPUT_ASSEMBLY_SIZE   16
+      | 
+In file included from [01m[K/home/chris/ros2_ws/src/moveit_controller/src/eip_adapter.cpp:5[m[K:
+[01m[K/home/chris/ros2_ws/src/moveit_controller/include/OpENerInterface.hpp:22:[m[K [01;36m[Knote: [m[Kthis is the location of the previous definition
+   22 | #define OUTPUT_ASSEMBLY_SIZE   32
+      | 

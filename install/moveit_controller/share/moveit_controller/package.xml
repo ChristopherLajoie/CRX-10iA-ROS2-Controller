@@ -8,11 +8,9 @@
   <maintainer email="lajc1503@usherbrooke.ca">chris</maintainer>
   <license>Your license</license>
 
-  <!--<buildtool_depend>ament_python</buildtool_depend>-->
   <buildtool_depend>ament_cmake</buildtool_depend>
   <buildtool_depend>ament_cmake_python</buildtool_depend>
 
-  <!-- Dependencies -->
   <depend>rclpy</depend>
   <depend>rclcpp</depend>
   <depend>std_msgs</depend>
@@ -29,7 +27,6 @@
   <test_depend>python3-pytest</test_depend>
 
   <export>
-    <!--<build_type>ament_python</build_type>-->
     <build_type>ament_cmake</build_type>
   </export>
 </package>

@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 
-import rclpy
-import math
-import threading
-import queue
+import rclpy, math, threading, queue, os, yaml
 
-from std_msgs.msg import Empty
+from std_msgs.msg import String, Empty
 from action_msgs.msg import GoalStatus
 from rclpy.node import Node
 from moveit_controller.goal_builder import build_goal_msg
-from moveit_controller.socket_utils import setup_socket, socket_server
+from moveit_controller.comm import setup_socket, socket_server, eip_comm
 from moveit_controller.error_codes import error_code_dict, status_code_dict
+from ament_index_python.packages import get_package_share_directory
 from moveit_msgs.msg import MoveItErrorCodes
 from moveit_msgs.action import MoveGroup, ExecuteTrajectory
 from rclpy.action import ActionClient
+from rcl_interfaces.msg import SetParametersResult
+
+## SELECT COMMUNICATION METHOD ##
+SOCKET_MSG = False
 
 class MoveitController(Node):
     def __init__(self):
@@ -23,40 +25,65 @@ class MoveitController(Node):
         joint_goals_deg = self.get_parameter('joint_goals').value
         self.joint_goals_rad = [math.radians(angle) for angle in joint_goals_deg]
 
+        self.package_share_directory = get_package_share_directory('moveit_controller')
+        config_path = os.path.join(self.package_share_directory, 'config', 'config.yaml')
+        
+        with open(config_path, 'r') as file:
+            config_data = yaml.safe_load(file)
+        
+        self.home_cmd = config_data['home_cmd']
+        self.attach_cmd = config_data['attach_cmd']
+        self.detach_cmd = config_data['detach_cmd']
+        self.read_register = config_data['read_register']
+        self.part_handling_register = config_data['part_handling_register']
+        self.success_cmd = config_data['success_cmd']
+        self.fail_cmd = config_data['fail_cmd']
+        self.abort_cmd = config_data['abort_cmd']
+        self.cancel_cmd = config_data['cancel_cmd']
+
         self.execution_goal_handle = None
-        self.add_on_set_parameters_callback(self.parameter_callback)
+        self.retry_timer = None
+        self.previous_part_cmd = None
+        self.previous_home_cmd = None
 
-        # Socket setup
+        self.max_retries = 3
+        self.plan_retries = 0
+        self.exec_retries = 0
+
         self.declare_parameter('ip_address', '127.0.0.1')
-        self.declare_parameter('port', 5000)
-
         self.ip_address = self.get_parameter('ip_address').get_parameter_value().string_value
-        self.port = self.get_parameter('port').get_parameter_value().integer_value
+        self.get_logger().info(f'ip address: {self.ip_address}')
 
-        self.get_logger().info(f'IP Address: {self.ip_address}')
-        self.get_logger().info(f'Port: {self.port}')
-
-        self.command_queue = queue.Queue()
-
-        # Initialize socket server
-        self.sock = setup_socket(self.ip_address, self.port, self.get_logger())
-        if self.sock is None:
-            self.get_logger().error('Failed to set up socket server.')
-            return
-
-        # Initialize command and response queues
-        self.command_queue = queue.Queue()
         self.response_queue = queue.Queue()
-
-        self.socket_thread = threading.Thread(target=socket_server, args=(self.sock, self.get_logger(), self.command_queue, self.response_queue))
-        self.socket_thread.daemon = True
-        self.socket_thread.start()
+        self.command_queue = queue.Queue()
 
         self.create_timer(0.1, self.process_commands)
+
+        if SOCKET_MSG:
+            self.declare_parameter('port', 5000)
+            self.port = self.get_parameter('port').get_parameter_value().integer_value
+            self.get_logger().info(f'Port: {self.port}')
+
+            self.sock = setup_socket(self.ip_address, self.port, self.get_logger())
+
+            self.socket_thread = threading.Thread(target=socket_server, args=(self.sock, self.get_logger(), self.command_queue, self.response_queue))
+            self.socket_thread.daemon = True
+            self.socket_thread.start()
+
+            if self.sock is None:
+                self.get_logger().error('Failed to set up socket server.')
+                return
+        else:
+            self.eip_thread = threading.Thread(target=eip_comm, args=(self.get_logger(), self.ip_address, self.command_queue, self.response_queue))
+            self.eip_thread.daemon = True
+            self.eip_thread.start()
+
+        self.add_on_set_parameters_callback(self.parameter_callback)
 
         # Publisher
         self.update_start_state_publisher = self.create_publisher(
             Empty, '/rviz/moveit/update_start_state', 10)
+        self.part_manager_command_pub = self.create_publisher(String, 'gripper_part_command', 10)
   
         # Action clients
         self.move_group_action_client = ActionClient(self, MoveGroup, 'move_action')
@@ -65,16 +92,44 @@ class MoveitController(Node):
     def process_commands(self):
         while not self.command_queue.empty():
             command = self.command_queue.get()
-            if command == 'home':
+            reg_num = command['RegNum']
+            value = command['Value']
+
+            if not SOCKET_MSG:
+                home_cmd = self.previous_home_cmd != self.home_cmd and value == self.home_cmd
+                attach_cmd = self.previous_part_cmd != self.attach_cmd and value == self.attach_cmd 
+                detach_cmd = self.previous_part_cmd != self.detach_cmd and value == self.detach_cmd 
+                
+                if attach_cmd:
+                    command = 'attach'
+                elif detach_cmd:
+                    command = 'detach'
+
+            if home_cmd or (SOCKET_MSG and command == 'home'):
                 self.get_logger().info(f"Processing command: {command}")
                 self.busy = True
                 self.plan_and_execute()
-            else:
+
+            elif command in ['attach', 'detach']:
+                self.part_manager_command_pub.publish(String(data=command))
+
+            elif reg_num == 0:
+                  
+                if isinstance(value, list) and len(value) == 6 and all(isinstance(v, float) for v in value):
+                    self.set_parameters([rclpy.parameter.Parameter('joint_goals', rclpy.Parameter.Type.DOUBLE_ARRAY, value)])
+                else:
+                    self.get_logger().warn(f"Invalid value for joint_goals: {value}")
+
+            elif SOCKET_MSG:
                 self.get_logger().info(f"Received unrecognized command: {command}")
 
+            if reg_num == self.read_register:
+                self.previous_home_cmd = value
+            elif reg_num == self.part_handling_register:
+                self.previous_part_cmd = value
+            
 
     def parameter_callback(self, params):
-        from rcl_interfaces.msg import SetParametersResult
         successful = True
 
         for param in params:
@@ -86,35 +141,17 @@ class MoveitController(Node):
                     self.get_logger().info(f"homing to: {joint_goals_deg}")
                     joint_goals_deg = [float(angle) for angle in joint_goals_deg]
 
-                    # Convert degrees to radians
                     self.joint_goals_rad = [math.radians(angle) for angle in joint_goals_deg]
-               
+
+                    self.plan_retries = 0
+                    self.exec_retries = 0
                 except Exception as e:
                     successful = False
                     self.get_logger().error(f"Failed to update joint goals: {e}")
-            elif param.name == 'ip_address':
-                try:
-                    ip_address = param.value
-                    if not isinstance(ip_address, str):
-                        raise ValueError("ip_address must be a string")
-                    self.ip_address = ip_address
-                    self.get_logger().info(f"Updated ip_address to {self.ip_address}")
-                except Exception as e:
-                    self.get_logger().error(f"Failed to update ip_address: {e}")
-                    successful = False
-            elif param.name == 'port':
-                try:
-                    port = param.value
-                    if not isinstance(port, int):
-                        raise ValueError("port must be an integer")
-                    self.port = port
-                    self.get_logger().info(f"Updated port to {self.port}")
-                except Exception as e:
-                    self.get_logger().error(f"Failed to update port: {e}")
-                    successful = False
             else:
                 self.get_logger().warn(f"Unknown parameter: {param.name}")
-
+                successful = False
+        
         return SetParametersResult(successful=successful)
 
     def plan_and_execute(self):
@@ -125,18 +162,20 @@ class MoveitController(Node):
 
     def update_start_state(self):
         self.update_start_state_publisher.publish(Empty())
-        self.get_logger().info('Updated start state to current state.')
+        self.get_logger().info('Updated start state to current state')
 
     def send_planning_request(self):
         if not self.move_group_action_client.wait_for_server(timeout_sec=5.0):
             self.get_logger().error('MoveGroup action server not available!')
+            self.response_queue.put(self.fail_cmd)
             return
 
-        goal_msg = build_goal_msg(self.joint_goals_rad)
+        goal_msg = build_goal_msg(
+            joint_positions=self.joint_goals_rad
+        )
 
         self._send_goal_future = self.move_group_action_client.send_goal_async(
-            goal_msg,
-            feedback_callback=self.planning_feedback_callback
+            goal_msg
         )
         self._send_goal_future.add_done_callback(self.planning_response_callback)
 
@@ -147,7 +186,7 @@ class MoveitController(Node):
                 self.get_logger().error('Planning request rejected!')
                 return
 
-            self.get_logger().info('Planning request accepted.')
+            self.get_logger().info('Planning request accepted')
             self._get_result_future = goal_handle.get_result_async()
             self._get_result_future.add_done_callback(self.planning_result_callback)
 
@@ -155,22 +194,37 @@ class MoveitController(Node):
             self.get_logger().error(f'Exception in planning_response_callback: {e}')
             self.busy = False  
 
-    def planning_feedback_callback(self, feedback_msg):
-        feedback = feedback_msg.feedback
-        self.get_logger().info(f'Planning feedback: {feedback}')
-
     def planning_result_callback(self, future):
         try:
             result = future.result().result
             error_code = result.error_code.val
             error_description = error_code_dict.get(error_code, f"Unknown error code: {error_code}")
             if error_code == MoveItErrorCodes.SUCCESS:
-                self.get_logger().info('Planning successful.')
+                self.get_logger().info('Planning successful')
                 self.send_execution_request(result.planned_trajectory)
             else:
                 self.get_logger().error(f'Planning failed: {error_description}')
+
+                self.plan_retries += 1
+                if self.plan_retries < self.max_retries:
+                    self.get_logger().info(f'Retrying.. attempt {self.plan_retries}')
+                    retry_delay = 4.0 
+                    if self.retry_timer is None:
+                        self.retry_timer = self.create_timer(
+                            retry_delay,
+                            self.retry_planning
+                        )
+                else:
+                    self.plan_retries = 0
+                    self.get_logger().error(f'Failed after {self.max_retries} retries.')
+                    if SOCKET_MSG:
+                        self.response_queue.put("failed")
+                    else:
+                        self.response_queue.put(self.fail_cmd)
+
         except Exception as e:
             self.get_logger().error(f'Exception in planning_result_callback: {e}')
+            self.response_queue.put("failed")
 
     def send_execution_request(self, trajectory):
         if not self.execute_trajectory_action_client.wait_for_server(timeout_sec=5.0):
@@ -205,7 +259,7 @@ class MoveitController(Node):
         try:
             goal_result = future.result()
             if goal_result is None:
-                self.get_logger().error('Goal result is None.')
+                self.get_logger().error('Goal result is None')
                 return
 
             status = goal_result.status
@@ -213,37 +267,55 @@ class MoveitController(Node):
 
             result = goal_result.result
 
+            self.get_logger().info(f'Execution result status: {status_name}')
+            self.get_logger().info(f'Execution result error code: {result.error_code.val}')
+
             if status == GoalStatus.STATUS_SUCCEEDED:
                 error_code = result.error_code.val
-                error_description = error_code_dict.get(
-                    error_code, f"Unknown error code: {error_code}")
+                error_description = error_code_dict.get(error_code, f"Unknown error code: {error_code}")
                 if error_code == MoveItErrorCodes.SUCCESS:
-                    self.get_logger().info('Execution completed successfully.')
-                    # Send success message to client
-                    self.response_queue.put("execution_completed")
+                    self.get_logger().info('Execution completed successfully')
+                    if SOCKET_MSG:
+                        self.response_queue.put("succeeded")
+                    else:
+                        self.response_queue.put(self.success_cmd)
                 else:
                     self.get_logger().error(f'Execution failed: {error_description}')
-                    # Send failure message to client
-                    self.response_queue.put(f"execution_failed: {error_description}")
+                        
+                    self.exec_retries += 1
+                    if self.exec_retries < self.max_retries:
+                        self.get_logger().info(f'Retrying execution. Attempt {self.exec_retries}.')
+                        self.plan_and_execute()
+                    else:
+                        self.exec_retries = 0
+                        if SOCKET_MSG:
+                            self.response_queue.put("failed")
+                        else:
+                            self.response_queue.put(self.fail_cmd)
+
             elif status == GoalStatus.STATUS_ABORTED:
                 self.get_logger().error(f'Execution was aborted by the action server. Status: {status_name}')
-                # Send aborted message to client
-                self.response_queue.put("execution_aborted")
+                if SOCKET_MSG:
+                        self.response_queue.put("aborted")
+                else:
+                    self.response_queue.put(self.abort_cmd)
             elif status == GoalStatus.STATUS_CANCELED:
                 self.get_logger().info(f'Execution goal was canceled. Status: {status_name}')
-                # Send canceled message to client
-                self.response_queue.put("execution_canceled")
+                if SOCKET_MSG:
+                        self.response_queue.put("canceled")
+                else:
+                    self.response_queue.put(self.cancel_cmd)
             else:
                 self.get_logger().error(f'Execution failed with status: {status_name}')
-                # Send generic failure message to client
-                self.response_queue.put(f"execution_failed: status {status_name}")
+                if SOCKET_MSG:
+                        self.response_queue.put("failed")
+                else:
+                    self.response_queue.put(self.fail_cmd)
         except Exception as e:
             self.get_logger().error(f'Exception in execution_result_callback: {e}')
         finally:
             self.execution_result_future = None
             self.execution_goal_handle = None
-            self.busy = False
-
 
     def execution_feedback_callback(self, feedback_msg):
         state = feedback_msg.feedback.state
@@ -251,21 +323,16 @@ class MoveitController(Node):
         if 'failed' in state.lower():
             self.get_logger().error('Execution failed according to feedback.')
 
-    def cancel_done_callback(self, future):
-        try:
-            cancel_response = future.result()
-            if len(cancel_response.goals_canceling) > 0:
-                self.get_logger().info('Goal successfully canceled.')
-            else:
-                self.get_logger().info('Goal failed to cancel.')
-        except Exception as e:
-            self.get_logger().error(f'Exception in cancel_done_callback: {e}')
+    def retry_planning(self):
+        self.retry_timer.cancel()
+        self.retry_timer = None
 
+        self.plan_and_execute()
 
 def main(args=None):
     rclpy.init(args=args)
     moveit_controller = MoveitController()
-
+    
     executor = rclpy.executors.MultiThreadedExecutor()
     executor.add_node(moveit_controller)
 

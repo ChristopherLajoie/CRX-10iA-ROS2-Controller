@@ -1,9 +1,11 @@
 setup.cfg
 setup.py
 moveit_controller/__init__.py
+moveit_controller/comm.py
 moveit_controller/controller.py
 moveit_controller/error_codes.py
 moveit_controller/goal_builder.py
+moveit_controller/part_manager.py
 moveit_controller/socket_utils.py
 moveit_controller.egg-info/PKG-INFO
 moveit_controller.egg-info/SOURCES.txt

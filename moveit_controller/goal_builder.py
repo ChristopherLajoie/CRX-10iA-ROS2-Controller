@@ -26,7 +26,7 @@ def build_goal_msg(joint_positions):
     goal_msg.request.workspace_parameters = WorkspaceParameters()
     goal_msg.request.start_state.is_diff = True
     goal_msg.request.group_name = 'arm'
-    goal_msg.request.allowed_planning_time = 30.0
+    goal_msg.request.allowed_planning_time = 60.0
     goal_msg.request.planner_id = config_data['planner']
     goal_msg.request.pipeline_id = config_data['pipeline']
 
@@ -38,6 +38,8 @@ def build_goal_msg(joint_positions):
         joint_constraint = JointConstraint()
         joint_constraint.joint_name = name
         joint_constraint.position = position
+        joint_constraint.tolerance_above = 0.0
+        joint_constraint.tolerance_below = 0.0
         joint_constraint.weight = 1.0
         constraints.joint_constraints.append(joint_constraint)
 

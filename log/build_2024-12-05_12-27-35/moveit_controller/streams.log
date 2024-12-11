@@ -1,0 +1,57 @@
+[0.135s] Invoking command in '/home/chris/ros2_ws/src/moveit_controller/build/moveit_controller': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --build /home/chris/ros2_ws/src/moveit_controller/build/moveit_controller -- -j12 -l12
+[0.206s] [35m[1mConsolidate compiler generated dependencies of target eip_adapter[0m
+[0.227s] [100%] Built target eip_adapter
+[0.237s] [100%] Built target ament_cmake_python_copy_moveit_controller
+[0.237s] [100%] Built target ament_cmake_python_copy_moveit_controller_setup
+[0.732s] running egg_info
+[0.733s] writing moveit_controller.egg-info/PKG-INFO
+[0.734s] writing dependency_links to moveit_controller.egg-info/dependency_links.txt
+[0.734s] writing top-level names to moveit_controller.egg-info/top_level.txt
+[0.736s] reading manifest file 'moveit_controller.egg-info/SOURCES.txt'
+[0.737s] writing manifest file 'moveit_controller.egg-info/SOURCES.txt'
+[0.776s] [100%] Built target ament_cmake_python_build_moveit_controller_egg
+[0.788s] Invoked command in '/home/chris/ros2_ws/src/moveit_controller/build/moveit_controller' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --build /home/chris/ros2_ws/src/moveit_controller/build/moveit_controller -- -j12 -l12
+[0.827s] Invoking command in '/home/chris/ros2_ws/src/moveit_controller/build/moveit_controller': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --install /home/chris/ros2_ws/src/moveit_controller/build/moveit_controller
+[0.835s] -- Install configuration: ""
+[0.835s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/lib/moveit_controller/eip_adapter
+[0.835s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/lib/moveit_controller/controller
+[0.835s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/lib/moveit_controller/part_manager
+[0.835s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/share/moveit_controller/environment/pythonpath.sh
+[0.835s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/share/moveit_controller/environment/pythonpath.dsv
+[0.836s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/local/lib/python3.10/dist-packages/moveit_controller-0.0.0-py3.10.egg-info
+[0.836s] -- Installing: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/local/lib/python3.10/dist-packages/moveit_controller-0.0.0-py3.10.egg-info/dependency_links.txt
+[0.836s] -- Installing: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/local/lib/python3.10/dist-packages/moveit_controller-0.0.0-py3.10.egg-info/top_level.txt
+[0.836s] -- Installing: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/local/lib/python3.10/dist-packages/moveit_controller-0.0.0-py3.10.egg-info/SOURCES.txt
+[0.836s] -- Installing: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/local/lib/python3.10/dist-packages/moveit_controller-0.0.0-py3.10.egg-info/PKG-INFO
+[0.836s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/local/lib/python3.10/dist-packages/moveit_controller
+[0.836s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/local/lib/python3.10/dist-packages/moveit_controller/goal_builder.py
+[0.836s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/local/lib/python3.10/dist-packages/moveit_controller/error_codes.py
+[0.836s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/local/lib/python3.10/dist-packages/moveit_controller/part_manager.py
+[0.837s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/local/lib/python3.10/dist-packages/moveit_controller/comm.py
+[0.837s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/local/lib/python3.10/dist-packages/moveit_controller/controller.py
+[0.837s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/local/lib/python3.10/dist-packages/moveit_controller/__init__.py
+[0.867s] Listing '/home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/local/lib/python3.10/dist-packages/moveit_controller'...
+[0.873s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/share/moveit_controller/launch
+[0.873s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/share/moveit_controller/launch/controller.launch.py
+[0.873s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/share/moveit_controller/launch/fanuc_nodes.launch.py
+[0.873s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/share/moveit_controller/launch/ethernet_adapter.launch.py
+[0.873s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/share/moveit_controller/meshes
+[0.873s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/share/moveit_controller/meshes/part.stl
+[0.873s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/share/moveit_controller/config
+[0.873s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/share/moveit_controller/config/config.yaml
+[0.874s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/share/ament_index/resource_index/package_run_dependencies/moveit_controller
+[0.874s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/share/ament_index/resource_index/parent_prefix_path/moveit_controller
+[0.874s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/share/moveit_controller/environment/ament_prefix_path.sh
+[0.874s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/share/moveit_controller/environment/ament_prefix_path.dsv
+[0.874s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/share/moveit_controller/environment/path.sh
+[0.874s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/share/moveit_controller/environment/path.dsv
+[0.874s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/share/moveit_controller/local_setup.bash
+[0.874s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/share/moveit_controller/local_setup.sh
+[0.874s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/share/moveit_controller/local_setup.zsh
+[0.874s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/share/moveit_controller/local_setup.dsv
+[0.874s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/share/moveit_controller/package.dsv
+[0.874s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/share/ament_index/resource_index/packages/moveit_controller
+[0.875s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/share/moveit_controller/cmake/moveit_controllerConfig.cmake
+[0.875s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/share/moveit_controller/cmake/moveit_controllerConfig-version.cmake
+[0.875s] -- Up-to-date: /home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/share/moveit_controller/package.xml
+[0.877s] Invoked command in '/home/chris/ros2_ws/src/moveit_controller/build/moveit_controller' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/humble /usr/bin/cmake --install /home/chris/ros2_ws/src/moveit_controller/build/moveit_controller

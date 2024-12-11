@@ -6,6 +6,7 @@ normal_axis: 'x'
 
 pipeline: 'ompl'
 planner: ''
+#planner: 'RRTstarkConfigDefault'
 
 read_register: 5
 write_register: 6

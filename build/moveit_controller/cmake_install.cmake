@@ -43,27 +43,43 @@ if(NOT DEFINED CMAKE_OBJDUMP)
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/moveit_controller/ethernetip_utils" AND
-     NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/moveit_controller/ethernetip_utils")
+  if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/moveit_controller/eip_adapter" AND
+     NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/moveit_controller/eip_adapter")
     file(RPATH_CHECK
-         FILE "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/moveit_controller/ethernetip_utils"
+         FILE "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/moveit_controller/eip_adapter"
          RPATH "")
   endif()
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/moveit_controller" TYPE EXECUTABLE FILES "/home/chris/ros2_ws/src/moveit_controller/build/moveit_controller/ethernetip_utils")
-  if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/moveit_controller/ethernetip_utils" AND
-     NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/moveit_controller/ethernetip_utils")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/moveit_controller" TYPE EXECUTABLE FILES "/home/chris/ros2_ws/src/moveit_controller/build/moveit_controller/eip_adapter")
+  if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/moveit_controller/eip_adapter" AND
+     NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/moveit_controller/eip_adapter")
     file(RPATH_CHANGE
-         FILE "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/moveit_controller/ethernetip_utils"
+         FILE "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/moveit_controller/eip_adapter"
          OLD_RPATH "/usr/local/lib:/opt/ros/humble/lib:"
          NEW_RPATH "")
     if(CMAKE_INSTALL_DO_STRIP)
-      execute_process(COMMAND "/usr/bin/strip" "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/moveit_controller/ethernetip_utils")
+      execute_process(COMMAND "/usr/bin/strip" "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/moveit_controller/eip_adapter")
     endif()
   endif()
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
   file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/moveit_controller" TYPE PROGRAM RENAME "controller" FILES "/home/chris/ros2_ws/src/moveit_controller/moveit_controller/controller.py")
+endif()
+
+if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/moveit_controller" TYPE PROGRAM RENAME "part_manager" FILES "/home/chris/ros2_ws/src/moveit_controller/moveit_controller/part_manager.py")
+endif()
+
+if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/moveit_controller/launch" TYPE DIRECTORY FILES "/home/chris/ros2_ws/src/moveit_controller/launch/")
+endif()
+
+if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/moveit_controller/meshes" TYPE DIRECTORY FILES "/home/chris/ros2_ws/src/moveit_controller/meshes/")
+endif()
+
+if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/moveit_controller/config" TYPE DIRECTORY FILES "/home/chris/ros2_ws/src/moveit_controller/config/")
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
@@ -88,10 +104,6 @@ if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_
         "/usr/bin/python3.10" "-m" "compileall"
         "/home/chris/ros2_ws/src/moveit_controller/install/moveit_controller/local/lib/python3.10/dist-packages/moveit_controller"
       )
-endif()
-
-if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/share/moveit_controller/launch" TYPE DIRECTORY FILES "/home/chris/ros2_ws/src/moveit_controller/launch/")
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)

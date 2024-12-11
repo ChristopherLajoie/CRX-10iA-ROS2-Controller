@@ -16,28 +16,6 @@ find_package(rclpy REQUIRED)
 
 include_directories(include)
 
-link_directories(/usr/local/lib)  # Path to OpENer library
-
-add_executable(eip_adapter src/eip_adapter.cpp)
-ament_target_dependencies(eip_adapter rclcpp)
-
-target_link_libraries(eip_adapter
-  CIP  
-  EIPScanner  
-  ENET_ENCAP  
-  NVDATA  
-  PLATFORM_GENERIC  
-  POSIXPLATFORM  
-  SAMPLE_APP
-  Utils
-  pthread  
-)
-
-install(TARGETS
-  eip_adapter
-  DESTINATION lib/${PROJECT_NAME}
-)
-
 install(PROGRAMS
   moveit_controller/controller.py
   DESTINATION lib/${PROJECT_NAME}
@@ -48,8 +26,6 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
   RENAME part_manager
 )
-
-ament_python_install_package(${PROJECT_NAME})
 
 install(DIRECTORY launch/
   DESTINATION share/${PROJECT_NAME}/launch
@@ -62,5 +38,7 @@ install(DIRECTORY meshes/
 install(DIRECTORY config/
   DESTINATION share/${PROJECT_NAME}/config
 )
+
+ament_python_install_package(${PROJECT_NAME})
 
 ament_package()
